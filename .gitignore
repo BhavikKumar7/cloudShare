@@ -1,0 +1,18 @@
+# Ignore IntelliJ IDEA project files
+.idea/
+
+# Ignore Maven target folder
+cloudshareapi/target/
+
+# Ignore Node modules
+cloudsharewebapp/node_modules/
+
+# Ignore environment files
+cloudsharewebapp/.env
+
+# Ignore logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
