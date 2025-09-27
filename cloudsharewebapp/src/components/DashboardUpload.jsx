@@ -1,8 +1,42 @@
 import { ArrowUpFromLine, X, FileIcon, Loader2 } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 const DashboardUpload = ({ files, onFileChange, onUpload, uploading, onRemoveFile, remainingUploads }) => {
     const fileInputRef = useRef(null);
+    const [errorMessage, setErrorMessage] = useState("");
+
+    const MAX_FILES = 5;
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "pdf", "txt", "docx", "xlsx"];
+
+    const validateFiles = (selectedFiles) => {
+        if (files.length + selectedFiles.length > MAX_FILES) {
+            return `You can only upload up to ${MAX_FILES} files in total.`;
+        }
+
+        for (let file of selectedFiles) {
+            if (file.size > MAX_FILE_SIZE) {
+                return `File "${file.name}" exceeds the maximum allowed size of 10MB.`;
+            }
+
+            const extension = file.name.split(".").pop().toLowerCase();
+            if (!ALLOWED_EXTENSIONS.includes(extension)) {
+                return `File "${file.name}" has unsupported type .${extension}. Allowed types: ${ALLOWED_EXTENSIONS.join(", ")}`;
+            }
+        }
+        return null;
+    };
+
+    const handleFilesSelected = (selectedFiles) => {
+        const error = validateFiles(selectedFiles);
+        if (error) {
+            setErrorMessage(error);
+            return;
+        }
+        setErrorMessage(""); // clear error
+        const mockEvent = { target: { files: selectedFiles } };
+        onFileChange(mockEvent);
+    };
 
     const handleDragOver = (e) => {
         e.preventDefault();
@@ -12,20 +46,21 @@ const DashboardUpload = ({ files, onFileChange, onUpload, uploading, onRemoveFil
     const handleDrop = (e) => {
         e.preventDefault();
         e.stopPropagation();
-
         const droppedFiles = Array.from(e.dataTransfer.files);
         if (droppedFiles.length > 0) {
-            const mockEvent = {
-                target: {
-                    files: droppedFiles
-                }
-            };
-            onFileChange(mockEvent);
+            handleFilesSelected(droppedFiles);
         }
     };
 
     const handleBrowseClick = () => {
         fileInputRef.current.click();
+    };
+
+    const handleInputChange = (e) => {
+        const selectedFiles = Array.from(e.target.files);
+        if (selectedFiles.length > 0) {
+            handleFilesSelected(selectedFiles);
+        }
     };
 
     const formatFileSize = (bytes) => {
@@ -62,13 +97,17 @@ const DashboardUpload = ({ files, onFileChange, onUpload, uploading, onRemoveFil
                         ref={fileInputRef}
                         type="file"
                         multiple
-                        onChange={onFileChange}
+                        onChange={handleInputChange}
                         className="hidden"
                         accept="*/*"
-                        max={5}
                     />
                 </div>
             </div>
+
+            {/* ⚠️ Validation Message */}
+            {errorMessage && (
+                <div className="mt-2 text-xs text-red-500 font-medium">{errorMessage}</div>
+            )}
 
             {files.length > 0 && (
                 <div className="mt-4">
