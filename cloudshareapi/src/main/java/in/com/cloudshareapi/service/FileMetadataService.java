@@ -29,40 +29,75 @@ public class FileMetadataService {
     private final UserCreditsService userCreditsService;
     private final FileMetadataRepository fileMetadataRepository;
 
-    public List<FileMetadataDTO> uploadFiles(MultipartFile files[]) throws IOException {
-        ProfileDocument currentProfile = profileService.getCurrentProfile();
-        List<FileMetadataDocument> savedFiles = new ArrayList<>();
+public List<FileMetadataDTO> uploadFiles(MultipartFile[] files) throws IOException {
+    ProfileDocument currentProfile = profileService.getCurrentProfile();
+    List<FileMetadataDocument> savedFiles = new ArrayList<>();
 
-        if (!userCreditsService.hasEnoughCredits(files.length)) {
-            throw new RuntimeException("Not enough credits to upload files. Please purchase more credits");
-        }
-
-        Path uploadPath = Paths.get("upload").toAbsolutePath().normalize();
-        Files.createDirectories(uploadPath);
-
-        for (MultipartFile file : files) {
-            String fileName = UUID.randomUUID()+"."+ StringUtils.getFilenameExtension(file.getOriginalFilename());
-            Path targetLocation = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-            FileMetadataDocument fileMetadata = FileMetadataDocument.builder()
-                    .fileLocation(targetLocation.toString())
-                    .name(file.getOriginalFilename())
-                    .size(file.getSize())
-                    .type(file.getContentType())
-                    .clerkId(currentProfile.getClerkId())
-                    .isPublic(false)
-                    .uploadedAt(LocalDateTime.now())
-                    .build();
-
-            userCreditsService.consumeCredit();
-
-            savedFiles.add(fileMetadataRepository.save(fileMetadata));
-        }
-        return savedFiles.stream().map(fileMetadataDocument -> mapToDTO(fileMetadataDocument))
-                .collect(Collectors.toList());
-
+    if (files == null || files.length == 0) {
+        throw new IllegalArgumentException("No files provided for upload");
     }
+
+    // Check if user has enough credits
+    if (!userCreditsService.hasEnoughCredits(files.length)) {
+        throw new RuntimeException("Not enough credits to upload files. Please purchase more credits");
+    }
+
+    Path uploadPath = Paths.get("upload").toAbsolutePath().normalize();
+    Files.createDirectories(uploadPath);
+
+    for (MultipartFile file : files) {
+        // 1. Null or empty validation
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("One of the files is empty or invalid");
+        }
+
+        // 2. File size validation (server-side enforcement beyond properties)
+        long maxFileSize = 10 * 1024 * 1024; // 10MB
+        if (file.getSize() > maxFileSize) {
+            throw new IllegalArgumentException("File " + file.getOriginalFilename() + " exceeds maximum allowed size of 10MB");
+        }
+
+        // 3. File name and extension validation
+        String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
+        if (!StringUtils.hasText(originalFileName)) {
+            throw new IllegalArgumentException("File name cannot be empty");
+        }
+
+        String extension = StringUtils.getFilenameExtension(originalFileName);
+        if (extension == null || extension.trim().isEmpty()) {
+            throw new IllegalArgumentException("File must have a valid extension");
+        }
+
+        // Optional: restrict allowed extensions
+        List<String> allowedExtensions = List.of("jpg", "jpeg", "png", "pdf", "txt", "docx", "xlsx");
+        if (!allowedExtensions.contains(extension.toLowerCase())) {
+            throw new IllegalArgumentException("File type ." + extension + " is not supported");
+        }
+
+        // 4. Safe unique file naming
+        String fileName = UUID.randomUUID() + "." + extension;
+        Path targetLocation = uploadPath.resolve(fileName);
+
+        // 5. Copy file to storage
+        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+        // 6. Save metadata
+        FileMetadataDocument fileMetadata = FileMetadataDocument.builder()
+                .fileLocation(targetLocation.toString())
+                .name(originalFileName)
+                .size(file.getSize())
+                .type(file.getContentType())
+                .clerkId(currentProfile.getClerkId())
+                .isPublic(false)
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        userCreditsService.consumeCredit();
+        savedFiles.add(fileMetadataRepository.save(fileMetadata));
+    }
+
+    return savedFiles.stream().map(this::mapToDTO).collect(Collectors.toList());
+}
 
     private FileMetadataDTO mapToDTO(FileMetadataDocument fileMetadataDocument) {
         return FileMetadataDTO.builder()
