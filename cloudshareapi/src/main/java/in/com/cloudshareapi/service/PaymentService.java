@@ -133,7 +133,7 @@ public class PaymentService {
         }
     }
 
-    private void updateTransactionStatus(String razorpayOrderId, String status, String razorpayPaymentId, Integer creditsToAdd) {
+    public void updateTransactionStatus(String razorpayOrderId, String status, String razorpayPaymentId, Integer creditsToAdd) {
         paymentTransactionRepository.findAll().stream()
                 .filter(t -> t.getOrderId() != null && t.getOrderId().equals(razorpayOrderId))
                 .findFirst()
@@ -148,10 +148,7 @@ public class PaymentService {
                 .orElse(null);
     }
 
-    /**
-     * Generate HMAC SHA256 signature for payment verification
-     */
-    private String generateHmacSha256Signature(String data, String secret)
+    public String generateHmacSha256Signature(String data, String secret)
             throws NoSuchAlgorithmException, InvalidKeyException {
         SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
         Mac mac = Mac.getInstance("HmacSHA256");
@@ -162,7 +159,7 @@ public class PaymentService {
         return toHexString(hmacData);
     }
 
-    private String toHexString(byte[] bytes) {
+    public String toHexString(byte[] bytes) {
         Formatter formatter = new Formatter();
         for (byte b : bytes) {
             formatter.format("%02x", b);
