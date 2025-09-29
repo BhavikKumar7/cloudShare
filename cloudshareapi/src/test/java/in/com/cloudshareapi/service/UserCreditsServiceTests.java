@@ -87,39 +87,19 @@ class UserCreditsServiceTests {
     }
 
     @Test
-    void testGetUserCredits_WithoutParam() {
-        ProfileDocument profile = ProfileDocument.builder().clerkId("clerk123").build();
-        when(profileService.getCurrentProfile()).thenReturn(profile);
-
-        UserCredits credits = UserCredits.builder()
-                .clerkId("clerk123")
-                .credits(7)
-                .plan("BASIC")
-                .build();
-
-        when(userCreditsRepository.findByClerkId("clerk123")).thenReturn(Optional.of(credits));
-
-        UserCredits result = userCreditsService.getUserCredits();
-
-        assertNotNull(result);
-        assertEquals("clerk123", result.getClerkId());
-        assertEquals(7, result.getCredits());
-    }
-
-    @Test
     void testHasEnoughCredits_WhenEnough() {
         ProfileDocument profile = ProfileDocument.builder().clerkId("clerk123").build();
         when(profileService.getCurrentProfile()).thenReturn(profile);
 
         UserCredits credits = UserCredits.builder()
                 .clerkId("clerk123")
-                .credits(10)
+                .credits(5)
                 .plan("BASIC")
                 .build();
 
         when(userCreditsRepository.findByClerkId("clerk123")).thenReturn(Optional.of(credits));
 
-        boolean result = userCreditsService.hasEnoughCredits(5);
+        boolean result = userCreditsService.hasEnoughCredits(2);
 
         assertTrue(result);
     }

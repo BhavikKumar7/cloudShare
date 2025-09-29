@@ -70,7 +70,6 @@ class ProfileServiceTests {
 
     @Test
     void testUpdateProfile_ExistingProfile() {
-        // given
         ProfileDocument existingProfile = ProfileDocument.builder()
                 .id("1")
                 .clerkId("clerk123")
@@ -165,7 +164,6 @@ class ProfileServiceTests {
 
     @Test
     void testGetCurrentProfile_WhenNotAuthenticated() {
-        // given: no authentication set
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(null);
         SecurityContextHolder.setContext(securityContext);
